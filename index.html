@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StreamTrace — Video Bitstream Analyzer</title>
+<meta name="description" content="StreamTrace is a Windows analyzer for compressed video (H.264, HEVC, VVC, AV1, VP9, MPEG-2): frame and block-level coding data, bitrate, and PSNR/SSIM/VMAF quality maps against the original.">
+<link rel="icon" type="image/png" href="favicon.png">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-alt: #f3f6fa;
+    --text: #18212e;
+    --muted: #556275;
+    --border: #dde3ec;
+    --card: #ffffff;
+    --navy: #0e2a4d;
+    --navy-2: #14477a;
+    --accent: #0a9fc7;
+    --accent-ink: #ffffff;
+    --orange: #e98a0c;
+    --shadow: 0 6px 24px rgba(14, 42, 77, 0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d141f;
+      --bg-alt: #121c2a;
+      --text: #e6edf6;
+      --muted: #9fb0c5;
+      --border: #24324a;
+      --card: #142033;
+      --accent: #38d9ff;
+      --accent-ink: #062033;
+      --orange: #ffa53a;
+      --shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  a { color: var(--accent); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+
+  /* Header */
+  header.site {
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  header.site .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; font-weight: 700; font-size: 18px; }
+  .brand img { width: 30px; height: 30px; }
+  nav a { color: var(--muted); text-decoration: none; margin-left: 22px; font-size: 15px; }
+  nav a:hover { color: var(--text); }
+  @media (max-width: 720px) { nav { display: none; } }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(160deg, var(--navy) 0%, var(--navy-2) 100%);
+    color: #fff;
+    padding: 64px 0 0;
+  }
+  .hero .wrap { display: grid; grid-template-columns: 1fr; gap: 28px; text-align: center; }
+  .hero h1 { font-size: clamp(32px, 5vw, 52px); line-height: 1.1; margin: 0; letter-spacing: -0.5px; }
+  .hero .by { color: #9fd9ee; font-weight: 600; margin-top: -14px; }
+  .hero p.lead { font-size: clamp(17px, 2.2vw, 20px); color: #d6e6f5; max-width: 760px; margin: 0 auto; }
+  .cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 13px 22px; border-radius: 10px; font-weight: 600; text-decoration: none;
+    border: 1px solid transparent; font-size: 16px;
+  }
+  .btn.primary { background: #38d9ff; color: #062033; }
+  .btn.primary[aria-disabled="true"] { background: rgba(255, 255, 255, 0.16); color: #d6e6f5; cursor: default; border-color: rgba(255, 255, 255, 0.25); }
+  .btn.ghost { color: #fff; border-color: rgba(255, 255, 255, 0.45); }
+  .btn.ghost:hover { background: rgba(255, 255, 255, 0.08); }
+  .hero .shot { margin: 18px auto 0; max-width: 1040px; }
+  .hero .shot img {
+    width: 100%; height: auto; display: block;
+    border-radius: 12px 12px 0 0; box-shadow: 0 -4px 40px rgba(0, 0, 0, 0.35);
+  }
+
+  /* Sections */
+  section { padding: 72px 0; }
+  section.alt { background: var(--bg-alt); }
+  h2 { font-size: clamp(26px, 3.4vw, 34px); margin: 0 0 10px; letter-spacing: -0.3px; }
+  .sub { color: var(--muted); margin: 0 0 36px; max-width: 760px; }
+  .grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .grid.two { grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 22px; box-shadow: var(--shadow);
+  }
+  .card h3 { margin: 0 0 8px; font-size: 18px; }
+  .card p, .card ul { margin: 0; color: var(--muted); }
+  .card ul { padding-left: 18px; }
+  .card li { margin: 4px 0; }
+  .tag { display: inline-block; width: 34px; height: 34px; border-radius: 9px; margin-bottom: 12px; }
+
+  /* Screenshots */
+  .shots { display: grid; gap: 34px; }
+  figure { margin: 0; }
+  figure img { width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--border); box-shadow: var(--shadow); display: block; }
+  figcaption { color: var(--muted); margin-top: 10px; font-size: 15px; }
+  figcaption b { color: var(--text); }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--bg-alt); font-weight: 600; width: 28%; }
+  tr:last-child td, tr:last-child th { border-bottom: 0; }
+  .table-scroll { overflow-x: auto; }
+
+  /* Download */
+  .download { text-align: center; }
+  .download .box {
+    display: inline-block; text-align: left; max-width: 720px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 28px; box-shadow: var(--shadow);
+  }
+  .soon { display: inline-block; background: color-mix(in srgb, var(--orange) 18%, transparent); color: var(--orange); font-weight: 700; padding: 3px 10px; border-radius: 999px; font-size: 13px; letter-spacing: 0.3px; }
+  .note { color: var(--muted); font-size: 15px; }
+
+  /* Credits & footer */
+  .credits p { color: var(--muted); font-size: 15px; margin: 0 0 10px; }
+  footer { border-top: 1px solid var(--border); padding: 28px 0; color: var(--muted); font-size: 14px; }
+  footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="images/streamtrace-256.png" alt="">StreamTrace</a>
+    <nav>
+      <a href="#uses">Uses</a>
+      <a href="#features">Features</a>
+      <a href="#screenshots">Screenshots</a>
+      <a href="#formats">Formats</a>
+      <a href="#download">Download</a>
+      <a href="#contact">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <div class="hero">
+    <div class="wrap">
+      <h1>StreamTrace</h1>
+      <div class="by">Video bitstream analyzer · by Video Coding Tools Ltd</div>
+      <p class="lead">See how every frame and every block of a compressed video was coded, what it cost in bits,
+        and how close it stays to the original — for H.264, HEVC, VVC, AV1, VP9 and MPEG-2.</p>
+      <div class="cta">
+        <a class="btn primary" aria-disabled="true">Download for Windows — coming soon</a>
+        <a class="btn ghost" href="#contact">Contact us</a>
+      </div>
+      <div class="shot">
+        <img src="images/blocks.jpg" width="1440" height="790"
+             alt="StreamTrace main window: frame-size chart with bitrate line, and a picture with macroblock types and motion vectors">
+      </div>
+    </div>
+  </div>
+
+  <section id="uses">
+    <div class="wrap">
+      <h2>What it is for</h2>
+      <p class="sub">StreamTrace shows how each frame of a compressed stream was coded, what it cost in bits, and why.
+        It handles streams in containers (MP4, MKV, WebM, TS, MPEG program streams) and raw bitstreams.</p>
+      <div class="grid">
+        <div class="card"><h3>Encoder tuning and comparison</h3>
+          <p>See how encoders and settings spend bits across I/P/B frames, where QP rises and falls, and how the GOP and reference structure is built.</p></div>
+        <div class="card"><h3>Block-level inspection</h3>
+          <p>Overlay partitioning (macroblocks, coding units, AV1/VP9 blocks), prediction types, per-block QP and motion vectors on the decoded picture.</p></div>
+        <div class="card"><h3>Rate-control analysis</h3>
+          <p>The per-frame size chart with a running-average bitrate line shows spikes, starved frames and keyframe cost at a glance.</p></div>
+        <div class="card"><h3>Quality against the original</h3>
+          <p>Open the uncompressed source and get PSNR, SSIM and VMAF per frame, plus quality maps that show where in the picture quality drops.</p></div>
+        <div class="card"><h3>Bitstream debugging</h3>
+          <p>Browse parsed headers (VPS/SPS/PPS, slice and picture headers, SEI) next to a hex view of each frame's bytes.</p></div>
+        <div class="card"><h3>Teaching and research</h3>
+          <p>Show how modern codecs split pictures and predict motion, and compare codec generations side by side.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="alt">
+    <div class="wrap">
+      <h2>Features</h2>
+      <p class="sub">Analysis data comes straight from the decoders, extended to export block-level information for every supported codec.</p>
+      <div class="grid two">
+        <div class="card"><span class="tag" style="background:#e5484d"></span><h3>Stream view</h3>
+          <ul>
+            <li>Bar chart of frame size or average QP, colored by frame type, in display or decode order</li>
+            <li>GOP boundaries and running-average bitrate line (250 ms – 5 s window)</li>
+            <li>Thumbnail strip of the decoded pictures</li>
+          </ul></div>
+        <div class="card"><span class="tag" style="background:#3478f6"></span><h3>Block analysis</h3>
+          <ul>
+            <li>Block grid and coding-tree partitioning, up to 128×128</li>
+            <li>Block types: intra, inter L0/L1, bi-prediction, skip, merge, direct, IBC, palette</li>
+            <li>QP map and motion vectors per prediction block; bits per block for AV1 and VP9</li>
+          </ul></div>
+        <div class="card"><span class="tag" style="background:#30a46c"></span><h3>Quality metrics</h3>
+          <ul>
+            <li>Reference as .y4m or raw 4:2:0 .yuv (8 to 16 bits), with frame alignment</li>
+            <li>PSNR (Y/Cb/Cr) and SSIM per block and frame</li>
+            <li>Frame VMAF (Netflix libvmaf, matches the reference tool) and a local VMAF map per tile</li>
+          </ul></div>
+        <div class="card"><span class="tag" style="background:#e98a0c"></span><h3>Syntax and data</h3>
+          <ul>
+            <li>Sequence, picture and slice headers; SEI messages</li>
+            <li>Hex view of each frame's bytes; pixel values of the selected block</li>
+            <li>Correct display order for raw H.264/HEVC/VVC and MPEG-2 program streams</li>
+          </ul></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="screenshots">
+    <div class="wrap">
+      <h2>Screenshots</h2>
+      <p class="sub">An H.264 clip analyzed against its uncompressed original.</p>
+      <div class="shots">
+        <figure>
+          <img src="images/quality.jpg" width="1440" height="790" loading="lazy"
+               alt="Local VMAF quality map over the picture, with a per-frame VMAF bar chart">
+          <figcaption><b>Quality map.</b> Local VMAF per tile, from red (poor) to green (good), with frame VMAF for every frame in the chart and PSNR, SSIM and VMAF in the status bar.</figcaption>
+        </figure>
+        <figure>
+          <img src="images/thumbs.jpg" width="1440" height="790" loading="lazy"
+               alt="Thumbnail strip of decoded frames above a picture with macroblock types">
+          <figcaption><b>Thumbnails and block types.</b> The stream view as a strip of decoded pictures; the overlay shows intra, inter and skipped macroblocks.</figcaption>
+        </figure>
+        <figure>
+          <img src="images/blocks.jpg" width="1440" height="790" loading="lazy"
+               alt="Frame-size chart with bitrate line and a picture with motion vectors">
+          <figcaption><b>GOP structure, bitrate and motion.</b> Frame sizes by type with a 1-second running-average bitrate, and motion vectors on a P-frame.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="formats" class="alt">
+    <div class="wrap">
+      <h2>Supported formats</h2>
+      <p class="sub">Block-level data is available for every codec listed below.</p>
+      <div class="table-scroll">
+        <table>
+          <tr><th>Video codecs</th><td>H.264/AVC, H.265/HEVC, H.266/VVC, AV1, VP9, MPEG-2 (MPEG-1, MPEG-4 Part 2 and H.263 with macroblock data)</td></tr>
+          <tr><th>Containers</th><td>MP4/MOV, Matroska/WebM, MPEG-TS, MPEG program streams (.mpg, .vob), IVF</td></tr>
+          <tr><th>Raw bitstreams</th><td>.264/.h264, .265/.hevc, .266/.vvc, .obu, .m2v</td></tr>
+          <tr><th>Reference video</th><td>.y4m (4:2:0, 8–12-bit) and raw planar 4:2:0 .yuv (8–16-bit)</td></tr>
+          <tr><th>Quality metrics</th><td>PSNR, SSIM, VMAF (model v0.6.1; 4K model for 3840-pixel-wide video)</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="download" class="download">
+    <div class="wrap">
+      <h2>Download</h2>
+      <div class="box">
+        <p><span class="soon">COMING SOON</span></p>
+        <p>The Windows installer (version 0.2) will be available here shortly. In the meantime, contact us for early access or questions.</p>
+        <table>
+          <tr><th>System</th><td>Windows 10 or 11, 64-bit</td></tr>
+          <tr><th>Disk space</th><td>About 70 MB</td></tr>
+          <tr><th>Installation</th><td>For all users, or for the current user without administrator rights. Includes an uninstaller.</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="contact" class="alt">
+    <div class="wrap">
+      <h2>Contact</h2>
+      <p class="sub">Questions, feedback or early access: write to
+        <a href="mailto:benny.abramov@gmail.com">benny.abramov@gmail.com</a>.</p>
+    </div>
+  </section>
+
+  <section class="credits">
+    <div class="wrap">
+      <h2>Credits</h2>
+      <p>StreamTrace uses <b>Qt</b> (LGPLv3) and <b>FFmpeg</b> (LGPLv2.1 or later) as replaceable shared libraries.
+        FFmpeg is a trademark of Fabrice Bellard, originator of the FFmpeg project.</p>
+      <p>AV1 decoding uses <b>dav1d</b> (BSD 2-Clause) and <b>libaom</b> (BSD 2-Clause, AOM Patent License);
+        VMAF uses <b>libvmaf</b> by Netflix (BSD+Patent).</p>
+      <p>StreamTrace adds block-level export to FFmpeg and libaom and a per-tile feature map to libvmaf.
+        These modifications and the full license texts are included with the installer.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Video Coding Tools Ltd</span>
+    <a href="mailto:benny.abramov@gmail.com">benny.abramov@gmail.com</a>
+  </div>
+</footer>
+
+</body>
+</html>
